@@ -75,6 +75,8 @@ export const SocketProvider = ({ children }) => {
     } catch (e) {}
   }, []);
 
+  const CLOUD_SERVER_URL = 'https://watch-together-8wj2.onrender.com';
+
   const [serverUrl, setServerUrlState] = useState(() => {
     try {
       const saved = localStorage.getItem('wt_server_url');
@@ -89,7 +91,7 @@ export const SocketProvider = ({ children }) => {
         return window.location.origin;
       }
     }
-    return 'http://localhost:3001';
+    return CLOUD_SERVER_URL;
   });
 
   const updateServerUrl = useCallback((newUrl) => {
