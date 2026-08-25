@@ -1,0 +1,9 @@
+{
+  "appId": "com.watchtogether.app",
+  "appName": "Watch Together",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}

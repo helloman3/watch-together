@@ -1,0 +1,24 @@
+{
+  "name": "watch-together",
+  "version": "1.0.0",
+  "description": "Private cross-platform Watch Together application with lockstep sync.",
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "build": "npm --prefix server install && npm --prefix client install && npm --prefix client run build",
+    "start": "node server/server.js",
+    "server": "node server/server.js",
+    "client": "npm --prefix client run dev",
+    "build:apk": "npm --prefix client run build && npx --prefix client cap sync android"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "watch-together",
+    "sync-video",
+    "webrtc",
+    "socket.io"
+  ],
+  "author": "",
+  "license": "MIT"
+}
