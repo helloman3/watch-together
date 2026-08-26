@@ -302,7 +302,7 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
       isMounted = false;
       ytPlayerRef.current = null;
     };
-  }, [media.type, ytVideoId, isYtApiLoaded, isDisplayingWebRtcStream]);
+  }, [media.type, ytVideoId, isYtApiLoaded]);
 
   // YouTube Poll current time & duration
   useEffect(() => {
@@ -483,8 +483,8 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
       enableRelayFallback(false);
       return undefined;
     }
-    // Give P2P a fair window to connect before falling back
-    const t = setTimeout(() => enableRelayFallback(true), 2000);
+    // Give P2P a brief window to connect before falling back
+    const t = setTimeout(() => enableRelayFallback(true), 1200);
     return () => clearTimeout(t);
   }, [isScreenShareActive, isScreenSharing, media.type, isHost, guestLocalBlobUrl, remoteScreenStream, enableRelayFallback]);
 
@@ -657,41 +657,6 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
       socket.off('buffer_sync_ready', handleBufferReady);
     };
   }, [socket, room?.media?.isPlaying, media.type, isDisplayingWebRtcStream]);
-
-  // Authoritative drift check for Guests (HTML5 + YouTube)
-  useEffect(() => {
-    if (isHost || !room?.media?.isPlaying || isDisplayingWebRtcStream || isDraggingSeekRef.current) return;
-
-    const interval = setInterval(() => {
-      if (!room?.media || !room.media.lastUpdated) return;
-
-      const elapsed = (Date.now() - room.media.lastUpdated) / 1000;
-      const expectedTime = room.media.currentTime + elapsed * (room.media.playbackRate || 1.0);
-
-      // Check YouTube drift
-      if (media.type === 'youtube' && ytPlayerRef.current) {
-        try {
-          const cur = ytPlayerRef.current.getCurrentTime();
-          if (typeof cur === 'number' && Math.abs(cur - expectedTime) > 1.8) {
-            ytPlayerRef.current.seekTo(expectedTime, true);
-          }
-        } catch (e) {}
-        return;
-      }
-
-      // Check HTML5 Video drift
-      const video = videoRef.current;
-      if (video && media.type !== 'youtube' && effectiveVideoSrc) {
-        const drift = Math.abs(video.currentTime - expectedTime);
-        if (drift > 1.8) {
-          video.currentTime = expectedTime;
-        }
-      }
-    }, 3500);
-
-    return () => clearInterval(interval);
-  }, [isHost, room?.media, media.type, isDisplayingWebRtcStream, effectiveVideoSrc]);
-
   // Cross-browser Fullscreen Helpers
   const enterFullscreen = useCallback(() => {
     const el = containerRef.current;

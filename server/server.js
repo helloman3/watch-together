@@ -978,10 +978,13 @@ io.on('connection', (socket) => {
       if (typeof ack === 'function') ack({ ok: false });
       return;
     }
-    // Only the active sharer may broadcast relay frames
-    if (room.screenSharerId !== socket.id) {
+    // Allow active sharer or host to broadcast relay frames
+    if (room.screenSharerId !== socket.id && room.hostId !== socket.id) {
       if (typeof ack === 'function') ack({ ok: false });
       return;
+    }
+    if (!room.screenSharerId) {
+      room.screenSharerId = socket.id;
     }
     socket.to(currentRoomId).emit('screen_relay_frame', payload);
     if (typeof ack === 'function') ack({ ok: true });
@@ -994,9 +997,12 @@ io.on('connection', (socket) => {
       if (typeof ack === 'function') ack({ ok: false });
       return;
     }
-    if (room.screenSharerId !== socket.id) {
+    if (room.screenSharerId !== socket.id && room.hostId !== socket.id) {
       if (typeof ack === 'function') ack({ ok: false });
       return;
+    }
+    if (!room.screenSharerId) {
+      room.screenSharerId = socket.id;
     }
     socket.to(currentRoomId).emit('screen_relay_webm', payload);
     if (typeof ack === 'function') ack({ ok: true });
@@ -1011,10 +1017,13 @@ io.on('connection', (socket) => {
     if (!room.relayViewers) room.relayViewers = new Map();
     const mode = data && data.mode === 'webm' ? 'webm' : 'jpeg';
     room.relayViewers.set(socket.id, { mode, at: Date.now() });
-    if (room.screenSharerId && room.screenSharerId !== socket.id) {
-      io.to(room.screenSharerId).emit('screen_relay_viewers', {
+
+    const targetSharerId = room.screenSharerId || room.hostId;
+    if (targetSharerId && targetSharerId !== socket.id) {
+      io.to(targetSharerId).emit('screen_relay_viewers', {
         count: room.relayViewers.size,
-        ...relayModesSummary(room)
+        hasWebm: true,
+        hasJpeg: true
       });
     }
     if (typeof ack === 'function') ack({ ok: true, count: room.relayViewers.size });

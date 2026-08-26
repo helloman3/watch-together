@@ -141,6 +141,9 @@ function pickWebmRecordMime() {
 
 function canPlayWebmRelay() {
   if (typeof window === 'undefined' || typeof window.MediaSource !== 'function') return false;
+  // Mobile / Capacitor / Safari devices use the hardware-accelerated Canvas JPEG relay for 100% reliability
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+  if (isMobile) return false;
   try {
     return MediaSource.isTypeSupported('video/webm; codecs="vp8,opus"') ||
            MediaSource.isTypeSupported('video/webm; codecs="vp9,opus"');
@@ -518,7 +521,7 @@ export const WebRTCProvider = ({ children }) => {
         return;
       }
 
-      if (hasJpeg) {
+      if (hasJpeg || count > 0) {
         startRelayPump();
       } else {
         stopRelayPump();
@@ -577,7 +580,8 @@ export const WebRTCProvider = ({ children }) => {
     if (!socket) return;
     if (enabled && !relaySubscribedRef.current) {
       relaySubscribedRef.current = true;
-      webmLastChunkAtRef.current = Date.now(); // grace period before stall nudges begin
+      setIsRemoteRelayActive(true);
+      webmLastChunkAtRef.current = Date.now();
       const mode = canPlayWebmRelay() ? 'webm' : 'jpeg';
       console.log(`[Relay] P2P not connected - requesting ${mode} relay fallback`);
       socket.emit('screen_relay_subscribe', { mode });
@@ -705,29 +709,33 @@ export const WebRTCProvider = ({ children }) => {
   // Only used when the browser cannot play WebM (e.g. iOS Safari) - otherwise
   // the WebM pipeline below handles everything at far higher quality.
   useEffect(() => {
-    if (!socket || canPlayWebmRelay()) return;
-    const drawFrame = ({ jpeg }) => {
-      if (!jpeg || relayActiveModeRef.current === 'webm') return;
+    if (!socket) return;
+    const drawFrame = ({ jpeg, w, h }) => {
+      if (!jpeg) return;
       const canvas = getRelayCanvas();
       const ctx = canvas.getContext('2d');
       relayActiveModeRef.current = 'jpeg';
       const blob = new Blob([jpeg], { type: 'image/jpeg' });
 
-      const paint = (image, w, h) => {
-        if (canvas.width !== w) canvas.width = w;
-        if (canvas.height !== h) canvas.height = h;
-        try { ctx.drawImage(image, 0, 0, w, h); } catch (e) {}
+      const paint = (image, width, height) => {
+        const targetW = width || image.width || image.naturalWidth || 1280;
+        const targetH = height || image.height || image.naturalHeight || 720;
+        if (canvas.width !== targetW) canvas.width = targetW;
+        if (canvas.height !== targetH) canvas.height = targetH;
+        try { ctx.drawImage(image, 0, 0, targetW, targetH); } catch (e) {}
         setIsRemoteRelayActive(true);
         if (image.close) image.close();
       };
 
       if (typeof window.createImageBitmap === 'function') {
-        window.createImageBitmap(blob).then((bmp) => paint(bmp, bmp.width, bmp.height)).catch(() => {});
+        window.createImageBitmap(blob)
+          .then((bmp) => paint(bmp, w, h))
+          .catch(() => {});
       } else {
         const url = URL.createObjectURL(blob);
         const img = new Image();
         img.onload = () => {
-          paint(img, img.naturalWidth, img.naturalHeight);
+          paint(img, w, h);
           URL.revokeObjectURL(url);
         };
         img.src = url;
@@ -1271,6 +1279,7 @@ export const WebRTCProvider = ({ children }) => {
       }
 
       broadcastActiveStreams();
+      startRelayPump();
       setTimeout(() => {
         broadcastActiveStreams();
       }, 500);
@@ -1284,7 +1293,7 @@ export const WebRTCProvider = ({ children }) => {
       }
       return null;
     }
-  }, [socket, broadcastActiveStreams]);
+  }, [socket, broadcastActiveStreams, startRelayPump]);
 
   const stopScreenShare = useCallback(() => {
     if (screenStreamRef.current) {
@@ -1333,12 +1342,13 @@ export const WebRTCProvider = ({ children }) => {
       }
 
       broadcastActiveStreams();
+      startRelayPump();
       return stream;
     } catch (err) {
       console.warn('Failed to start local video stream capture:', err);
       return null;
     }
-  }, [socket, broadcastActiveStreams]);
+  }, [socket, broadcastActiveStreams, startRelayPump]);
 
   const stopLocalVideoStream = useCallback(() => {
     if (localVideoStreamRef.current) {
