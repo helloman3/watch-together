@@ -55,7 +55,20 @@ namespace WatchTogetherLauncher
                     }
                 }
 
-                // 2. Launch Standalone App Window (prefer local server, fallback to cloud)
+                // 2. Launch Dedicated Standalone Native App if installed/unpacked
+                string electronExe = Path.Combine(baseDir, "client", "dist-electron", "win-unpacked", "Watch Together.exe");
+                if (File.Exists(electronExe))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = electronExe,
+                        WorkingDirectory = Path.GetDirectoryName(electronExe),
+                        UseShellExecute = true
+                    });
+                    return;
+                }
+
+                // Fallback: Launch Standalone App Window (prefer local server, fallback to cloud)
                 string targetUrl = IsPortOpen("127.0.0.1", 3001) ? "http://localhost:3001" : "https://watch-together-8wj2.onrender.com";
                 string edgePath86 = @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe";
                 string edgePath64 = @"C:\Program Files\Microsoft\Edge\Application\msedge.exe";

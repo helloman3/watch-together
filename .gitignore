@@ -6,6 +6,8 @@ client/android/app/build
 client/android/build
 client/android/.gradle
 server/cloudflared.exe
+client/dist-electron
+*.zip
 *.log
 .DS_Store
 Thumbs.db
