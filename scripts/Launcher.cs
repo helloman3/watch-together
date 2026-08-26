@@ -55,8 +55,8 @@ namespace WatchTogetherLauncher
                     }
                 }
 
-                // 2. Launch Standalone App Window connected 24/7 to Render Cloud
-                string targetUrl = "https://watch-together-8wj2.onrender.com";
+                // 2. Launch Standalone App Window (prefer local server, fallback to cloud)
+                string targetUrl = IsPortOpen("127.0.0.1", 3001) ? "http://localhost:3001" : "https://watch-together-8wj2.onrender.com";
                 string edgePath86 = @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe";
                 string edgePath64 = @"C:\Program Files\Microsoft\Edge\Application\msedge.exe";
                 string chromePath64 = @"C:\Program Files\Google\Chrome\Application\chrome.exe";

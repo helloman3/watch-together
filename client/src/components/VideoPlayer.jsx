@@ -76,6 +76,7 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
   const containerRef = useRef(null);
   const hlsRef = useRef(null);
   const ytPlayerRef = useRef(null);
+  const ytContainerRef = useRef(null);
   const isInternalUpdateRef = useRef(false);
   const isDraggingSeekRef = useRef(false);
 
@@ -202,7 +203,7 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
     setIsBuffering(false);
   }, [media.url]);
 
-  // 1. YouTube IFrame API Script Loader
+  // 1. YouTube IFrame API Script Loader with active polling guarantee
   useEffect(() => {
     if (window.YT && window.YT.Player) {
       setIsYtApiLoaded(true);
@@ -214,7 +215,11 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
       tag.id = 'youtube-iframe-api';
       tag.src = 'https://www.youtube.com/iframe_api';
       const firstScriptTag = document.getElementsByTagName('script')[0];
-      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+      if (firstScriptTag && firstScriptTag.parentNode) {
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+      } else {
+        document.head.appendChild(tag);
+      }
     }
 
     const previousOnReady = window.onYouTubeIframeAPIReady;
@@ -222,9 +227,18 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
       if (previousOnReady) previousOnReady();
       setIsYtApiLoaded(true);
     };
+
+    const pollYt = setInterval(() => {
+      if (window.YT && typeof window.YT.Player === 'function') {
+        setIsYtApiLoaded(true);
+        clearInterval(pollYt);
+      }
+    }, 150);
+
+    return () => clearInterval(pollYt);
   }, []);
 
-  // 2. Instantiate & Manage YouTube Player
+  // 2. Instantiate & Manage YouTube Player on a dedicated DOM mount node
   useEffect(() => {
     if (media.type !== 'youtube' || !ytVideoId || !isYtApiLoaded || isDisplayingWebRtcStream) {
       if (ytPlayerRef.current) {
@@ -234,7 +248,17 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
       return;
     }
 
+    const container = ytContainerRef.current;
+    if (!container) return;
+
     let isMounted = true;
+
+    // Reset container and create a dedicated mount node for YouTube API
+    container.innerHTML = '';
+    const mountDiv = document.createElement('div');
+    mountDiv.style.width = '100%';
+    mountDiv.style.height = '100%';
+    container.appendChild(mountDiv);
 
     try {
       if (ytPlayerRef.current) {
@@ -242,9 +266,10 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
         ytPlayerRef.current = null;
       }
 
-      ytPlayerRef.current = new window.YT.Player('yt-player-mount', {
+      ytPlayerRef.current = new window.YT.Player(mountDiv, {
         videoId: ytVideoId,
-        host: 'https://www.youtube.com',
+        width: '100%',
+        height: '100%',
         playerVars: {
           autoplay: 1,
           controls: 1,
@@ -252,7 +277,8 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
           rel: 0,
           enablejsapi: 1,
           playsinline: 1,
-          fs: 1
+          fs: 1,
+          origin: typeof window !== 'undefined' ? window.location.origin : undefined
         },
         events: {
           onReady: (event) => {
@@ -1303,7 +1329,7 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
       {/* Synchronized YouTube IFrame Player Slot */}
       {media.type === 'youtube' && !isDisplayingWebRtcStream && (
         <div className="w-full h-full flex items-center justify-center bg-black relative">
-          <div id="yt-player-mount" className="w-full h-full pointer-events-auto" />
+          <div ref={ytContainerRef} className="w-full h-full pointer-events-auto" />
         </div>
       )}
 
@@ -1502,7 +1528,7 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
             </form>
           )}
 
-          {isHost && (
+          {(isHost || !room?.hostOnlyControl) && (
             <div className="flex flex-wrap items-center justify-center gap-3 pt-1 border-t border-white/[0.06]">
               <button
                 onClick={async () => {

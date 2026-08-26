@@ -12,7 +12,12 @@ export function useDeviceMode() {
 
   const [uiModeOverride, setUiModeOverrideState] = useState(() => {
     try {
-      return localStorage.getItem('wt_ui_mode') || 'auto';
+      const mode = localStorage.getItem('wt_ui_mode');
+      if (mode === 'mobile' && typeof window !== 'undefined' && window.innerWidth >= 900 && !window.Capacitor?.isNativePlatform?.()) {
+        localStorage.removeItem('wt_ui_mode');
+        return 'auto';
+      }
+      return mode || 'auto';
     } catch {
       return 'auto';
     }
@@ -59,14 +64,19 @@ export function useDeviceMode() {
   const isElectron = typeof window !== 'undefined' && 
     (navigator.userAgent.toLowerCase().includes('electron') || !!window.electron);
 
-  const isCapacitor = typeof window !== 'undefined' && 
-    (!!window.Capacitor?.isNativePlatform?.() || !!window.Capacitor);
+  // Accurate native Capacitor check: only true on real Android / iOS devices
+  const isCapacitorNative = typeof window !== 'undefined' && (
+    window.Capacitor?.isNativePlatform?.() === true ||
+    window.Capacitor?.getPlatform?.() === 'android' ||
+    window.Capacitor?.getPlatform?.() === 'ios'
+  );
 
-  // Platform detection:
-  // - Real native Android/iOS app (Capacitor) -> Mobile
-  // - Small screens (< 768px) -> Mobile
-  // - Any PC monitor / Laptop window (>= 768px) -> Desktop Studio
+  // Screen-based detection:
+  // - Narrow screen (< 768px) -> Mobile
+  // - Touch screen in landscape with small height (< 500px) -> Mobile phone in landscape
   const isScreenMobile = windowSize.width < 768;
+  const isPhoneLandscape = isTouch && windowSize.height < 500;
+  const isMobileDevice = isCapacitorNative || isScreenMobile || isPhoneLandscape;
 
   let activeMode = 'desktop';
   if (uiModeOverride === 'desktop') {
@@ -74,8 +84,13 @@ export function useDeviceMode() {
   } else if (uiModeOverride === 'mobile') {
     activeMode = 'mobile';
   } else {
-    // Auto mode
-    activeMode = isCapacitor || isScreenMobile ? 'mobile' : 'desktop';
+    // Auto mode:
+    // If running in desktop Electron or wide non-mobile screen, use Desktop Studio
+    if (isElectron) {
+      activeMode = 'desktop';
+    } else {
+      activeMode = isMobileDevice ? 'mobile' : 'desktop';
+    }
   }
 
   const isMobile = activeMode === 'mobile';
@@ -99,7 +114,7 @@ export function useDeviceMode() {
     isPortrait,
     isTouch,
     isElectron,
-    isCapacitor,
+    isCapacitor: isCapacitorNative,
     windowWidth: windowSize.width,
     windowHeight: windowSize.height,
     uiModeOverride,

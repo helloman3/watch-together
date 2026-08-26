@@ -31,7 +31,9 @@ import {
   Link2,
   FolderOpen,
   Youtube,
-  RotateCcw
+  RotateCcw,
+  Send,
+  X
 } from 'lucide-react';
 import { extractYoutubeId } from '../../utils/youtube';
 
@@ -43,6 +45,7 @@ export const MobileRoom = () => {
     changeMedia, 
     userName, 
     messages,
+    sendChatMessage,
     sendReaction 
   } = useSocket();
   const { isScreenSharing, startScreenShare, stopScreenShare } = useWebRTC();
@@ -60,8 +63,19 @@ export const MobileRoom = () => {
   const [isOverlayChatVisible, setIsOverlayChatVisible] = useState(true);
   const [isTouchLocked, setIsTouchLocked] = useState(false);
   const [inputUrl, setInputUrl] = useState('');
+  const [isLandscapeChatOpen, setIsLandscapeChatOpen] = useState(false);
+  const [landscapeChatText, setLandscapeChatText] = useState('');
 
   const videoPlayerContainerRef = useRef(null);
+
+  const handleSendLandscapeChat = (e) => {
+    e?.preventDefault();
+    if (!landscapeChatText.trim()) return;
+    triggerHaptic(10);
+    sendChatMessage(landscapeChatText.trim());
+    setLandscapeChatText('');
+    setIsLandscapeChatOpen(false);
+  };
 
   // Clear guest local blob when host changes media
   useEffect(() => {
@@ -249,22 +263,75 @@ export const MobileRoom = () => {
             </button>
           )}
 
-          {/* Floating Emoji Reaction Bar in Landscape */}
+          {/* Floating Emoji Reaction Bar & Chat Button in Landscape */}
           {!isTouchLocked && (
-            <div className="absolute bottom-3 right-4 z-30 flex items-center gap-2 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
-              {['❤️', '😂', '🔥', '🍿', '🎉'].map((emoji, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    triggerHaptic(15);
-                    sendReaction(emoji);
-                  }}
-                  className="text-lg active:scale-125 transition-transform"
-                >
-                  {emoji}
-                </button>
-              ))}
+            <div className="absolute bottom-3 right-4 z-30 flex items-center gap-2">
+              <div className="flex items-center gap-2 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
+                {['❤️', '😂', '🔥', '🍿', '🎉'].map((emoji, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      triggerHaptic(15);
+                      sendReaction(emoji);
+                    }}
+                    className="text-lg active:scale-125 transition-transform"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </div>
+          )}
+
+          {/* Floating Chat Trigger Button (Bottom Left) in Landscape */}
+          {!isTouchLocked && (
+            <button
+              onClick={() => {
+                triggerHaptic(10);
+                setIsLandscapeChatOpen(!isLandscapeChatOpen);
+              }}
+              className={`absolute bottom-3 left-4 z-40 px-3 py-1.5 rounded-full backdrop-blur-md border transition-all flex items-center gap-1.5 text-xs font-bold shadow-lg ${
+                isLandscapeChatOpen
+                  ? 'bg-indigo-600 text-white border-indigo-400'
+                  : 'bg-black/60 text-slate-200 border-white/10 hover:text-white'
+              }`}
+              title="Type a chat message"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Chat</span>
+            </button>
+          )}
+
+          {/* Floating Chat Input Form in Landscape */}
+          {!isTouchLocked && isLandscapeChatOpen && (
+            <form
+              onSubmit={handleSendLandscapeChat}
+              className="absolute bottom-12 left-4 z-50 flex items-center gap-2 p-2 rounded-2xl bg-black/90 backdrop-blur-xl border border-white/20 shadow-2xl w-[320px] max-w-[calc(100vw-32px)] animate-slide-up"
+            >
+              <input
+                type="text"
+                value={landscapeChatText}
+                onChange={(e) => setLandscapeChatText(e.target.value)}
+                placeholder="Type a message..."
+                autoFocus
+                style={{ fontSize: '14px' }}
+                className="flex-1 bg-white/10 text-white rounded-xl px-3 py-1.5 text-xs border border-white/10 outline-none focus:border-indigo-500 placeholder-slate-400"
+              />
+              <button
+                type="submit"
+                disabled={!landscapeChatText.trim()}
+                className="p-2 btn-cinema-primary disabled:opacity-30 rounded-xl text-white active:scale-95 cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsLandscapeChatOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </form>
           )}
         </div>
 

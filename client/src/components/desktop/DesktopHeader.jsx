@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 export const DesktopHeader = ({ onOpenSettings, onOpenTunnel }) => {
-  const { room, isHost, latency, leaveRoom, soundEnabled, toggleSound, changeMedia, userName } = useSocket();
+  const { room, isHost, latency, leaveRoom, soundEnabled, toggleSound, changeMedia, userName, serverUrl } = useSocket();
   const { isMicOn, toggleMic, isScreenSharing, startScreenShare, stopScreenShare } = useWebRTC();
   const [copied, setCopied] = useState(false);
 
