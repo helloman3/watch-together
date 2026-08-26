@@ -470,10 +470,14 @@ io.on('connection', (socket) => {
   };
 
   // Create Room (Strict 1-Host enforcement & Duplicate Prevention)
-  socket.on('create_room', ({ name, roomCode, hostOnlyControl = false }, callback) => {
+  socket.on('create_room', (data = {}, callback) => {
+    const rawCode = data.roomCode || data.roomId;
+    const rawName = data.name || data.userName;
+    const hostOnlyControl = !!data.hostOnlyControl;
+
     let roomId;
-    if (roomCode && typeof roomCode === 'string' && roomCode.trim()) {
-      roomId = roomCode.trim().replace(/[^a-zA-Z0-9_-]/g, '').toUpperCase().substring(0, 10);
+    if (rawCode && typeof rawCode === 'string' && rawCode.trim()) {
+      roomId = rawCode.trim().replace(/[^a-zA-Z0-9_-]/g, '').toUpperCase().substring(0, 10);
     } else {
       // Auto-generate a unique 6-character room code
       do {
@@ -482,7 +486,7 @@ io.on('connection', (socket) => {
     }
 
     if (!roomId) roomId = 'ROOM1';
-    userName = (name || 'Host').trim().substring(0, 25);
+    userName = (rawName || 'Host').trim().substring(0, 25);
 
     let room = rooms.get(roomId);
 
@@ -583,8 +587,10 @@ io.on('connection', (socket) => {
   });
 
   // Join Room (Strict 1-Host enforcement)
-  socket.on('join_room', ({ roomId, name }, callback) => {
-    const code = (roomId || '').toUpperCase().trim();
+  socket.on('join_room', (data = {}, callback) => {
+    const rawCode = data.roomId || data.roomCode;
+    const rawName = data.name || data.userName;
+    const code = (rawCode || '').toUpperCase().trim();
     const room = rooms.get(code);
 
     if (!room) {
@@ -597,7 +603,7 @@ io.on('connection', (socket) => {
       room.cleanupTimeout = null;
     }
 
-    userName = (name || `Guest-${Math.floor(Math.random() * 1000)}`).trim().substring(0, 25);
+    userName = (rawName || `Guest-${Math.floor(Math.random() * 1000)}`).trim().substring(0, 25);
     currentRoomId = code;
     socket.join(code);
 
