@@ -126,8 +126,8 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
   // Whether we are displaying a live WebRTC screen or P2P local stream
   const isScreenShareActive = media.type === 'screen_share';
   const isGuestReceivingLocalP2P = !isHost && media.type === 'local_file' && !guestLocalBlobUrl;
-  const isDisplayingWebRtcStream = isScreenShareActive || (isGuestReceivingLocalP2P && !!remoteScreenStream);
-  const isLiveStreamActive = isScreenShareActive || isGuestReceivingLocalP2P || isDisplayingWebRtcStream;
+  const isDisplayingWebRtcStream = (isScreenShareActive && (isScreenSharing || !!remoteScreenStream)) || (isGuestReceivingLocalP2P && !!remoteScreenStream);
+  const isLiveStreamActive = isScreenShareActive || isGuestReceivingLocalP2P;
 
   // Relay fallback view: P2P never connected, but server-relayed frames are flowing
   const isRelayViewing =
@@ -516,7 +516,7 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
       return undefined;
     }
     // Give P2P a fair window to connect before falling back
-    const t = setTimeout(() => enableRelayFallback(true), 4000);
+    const t = setTimeout(() => enableRelayFallback(true), 2000);
     return () => clearTimeout(t);
   }, [isScreenShareActive, isScreenSharing, media.type, isHost, guestLocalBlobUrl, remoteScreenStream, enableRelayFallback]);
 

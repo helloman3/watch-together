@@ -12,6 +12,7 @@ const ICE_SERVERS = {
     { urls: 'stun:stun4.l.google.com:19302' },
     { urls: 'stun:stun.cloudflare.com:3478' },
     { urls: 'stun:global.stun.twilio.com:3478' },
+    { urls: 'stun:stun.services.mozilla.com' },
     { urls: 'stun:stun.relay.metered.ca:80' },
     {
       urls: [
@@ -44,39 +45,12 @@ function getGlobalAudioContext() {
   return globalAudioContext;
 }
 
-// High-bitrate SDP enhancer for crystal-clear 1080p 60fps video & studio 320kbps 48kHz Stereo audio
+// Clean, safe SDP enhancer for stereo tab audio without corrupting mobile WebRTC parsers
 function boostSdpQuality(sdp, videoBitrateKbps = 6000, audioBitrateKbps = 320) {
   if (!sdp) return sdp;
   let modified = sdp;
 
-  // 1. Add video bandwidth lines (b=AS and b=TIAS) right under m=video line
-  if (modified.includes('m=video')) {
-    modified = modified.replace(/m=video ([^\r\n]+)\r\n/g, (match) => {
-      return `${match}b=AS:${videoBitrateKbps}\r\nb=TIAS:${videoBitrateKbps * 1000}\r\n`;
-    });
-  }
-
-  // 2. Add audio bandwidth lines (b=AS and b=TIAS) right under m=audio line
-  if (modified.includes('m=audio')) {
-    modified = modified.replace(/m=audio ([^\r\n]+)\r\n/g, (match) => {
-      return `${match}b=AS:${audioBitrateKbps}\r\nb=TIAS:${audioBitrateKbps * 1000}\r\n`;
-    });
-  }
-
-  // 3. Add Google bitrate parameters to video codec fmtp lines ONLY (VP8, VP9, H264, AV1)
-  const videoPtMatches = Array.from(modified.matchAll(/a=rtpmap:(\d+) (?:VP8|VP9|H264|AV1|H265)\//gi));
-  const videoPts = new Set(videoPtMatches.map((m) => m[1]));
-  
-  if (videoPts.size > 0) {
-    modified = modified.replace(/a=fmtp:(\d+) ([^\r\n]+)/g, (match, pt, params) => {
-      if (videoPts.has(pt) && !params.includes('x-google-max-bitrate')) {
-        return `${match};x-google-min-bitrate=500;x-google-start-bitrate=2500;x-google-max-bitrate=${videoBitrateKbps}`;
-      }
-      return match;
-    });
-  }
-
-  // 4. Force Opus codec into Full 48kHz Stereo, 320kbps High-Fidelity mode
+  // Enhance Opus codec parameters safely
   const opusMatch = modified.match(/a=rtpmap:(\d+) opus\/48000\/2/i);
   if (opusMatch && opusMatch[1]) {
     const opusPt = opusMatch[1];
@@ -86,15 +60,8 @@ function boostSdpQuality(sdp, videoBitrateKbps = 6000, audioBitrateKbps = 320) {
         let p = existingParams;
         if (!p.includes('stereo=')) p += ';stereo=1';
         if (!p.includes('sprop-stereo=')) p += ';sprop-stereo=1';
-        if (!p.includes('maxaveragebitrate=')) p += `;maxaveragebitrate=${audioBitrateKbps * 1000}`;
-        if (!p.includes('maxplaybackrate=')) p += ';maxplaybackrate=48000';
-        if (!p.includes('sprop-maxcapturerate=')) p += ';sprop-maxcapturerate=48000';
-        if (!p.includes('cbr=')) p += ';cbr=1';
         return `a=fmtp:${opusPt} ${p}`;
       });
-    } else {
-      const rtpmapRegex = new RegExp(`(a=rtpmap:${opusPt} opus\/48000\/2\\r\\n)`, 'g');
-      modified = modified.replace(rtpmapRegex, `$1a=fmtp:${opusPt} minptime=10;useinbandfec=1;stereo=1;sprop-stereo=1;maxaveragebitrate=${audioBitrateKbps * 1000};maxplaybackrate=48000;sprop-maxcapturerate=48000;cbr=1\r\n`);
     }
   }
 

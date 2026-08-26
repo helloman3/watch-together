@@ -671,6 +671,20 @@ io.on('connection', (socket) => {
       lastUpdated: Date.now()
     };
 
+    // Track screen sharer / local file broadcaster for P2P & WebSocket relay
+    if (type === 'screen_share' || type === 'local_file') {
+      room.screenSharerId = socket.id;
+      // If relay viewers are already waiting, immediately prompt sharer to broadcast
+      if (room.relayViewers && room.relayViewers.size > 0) {
+        io.to(socket.id).emit('screen_relay_viewers', {
+          count: room.relayViewers.size,
+          ...relayModesSummary(room)
+        });
+      }
+    } else {
+      room.screenSharerId = null;
+    }
+
     // Clear all buffering locks when media switches!
     for (const [uid] of room.bufferStates) {
       room.bufferStates.set(uid, false);
