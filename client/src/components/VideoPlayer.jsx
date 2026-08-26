@@ -283,45 +283,13 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
             if (state === window.YT.PlayerState.PLAYING) {
               setIsPlaying(true);
               setIsBuffering(false);
-
-              if (!isInternalUpdateRef.current) {
-                if (!isHost && room?.hostOnlyControl) {
-                  try { 
-                    isInternalUpdateRef.current = true;
-                    player.pauseVideo(); 
-                    setTimeout(() => { isInternalUpdateRef.current = false; }, 600);
-                  } catch (e) {}
-                } else {
-                  try { 
-                    const curTime = typeof player.getCurrentTime === 'function' ? player.getCurrentTime() : 0;
-                    playMedia(curTime); 
-                  } catch (e) {}
-                }
-              }
             } else if (state === window.YT.PlayerState.PAUSED) {
               setIsPlaying(false);
-              if (!isInternalUpdateRef.current) {
-                if (!isHost && room?.hostOnlyControl) {
-                  try { 
-                    isInternalUpdateRef.current = true;
-                    player.playVideo(); 
-                    setTimeout(() => { isInternalUpdateRef.current = false; }, 600);
-                  } catch (e) {}
-                } else {
-                  try { 
-                    const curTime = typeof player.getCurrentTime === 'function' ? player.getCurrentTime() : 0;
-                    pauseMedia(curTime); 
-                  } catch (e) {}
-                }
-              }
+            } else if (state === window.YT.PlayerState.BUFFERING) {
+              setIsBuffering(true);
             } else if (state === window.YT.PlayerState.ENDED) {
               setIsPlaying(false);
-              if (isHost || !room?.hostOnlyControl) {
-                try { 
-                  const dur = typeof player.getDuration === 'function' ? player.getDuration() : 0;
-                  pauseMedia(dur); 
-                } catch (e) {}
-              }
+              setIsBuffering(false);
             }
           }
         }
@@ -531,7 +499,7 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
       if (media.type === 'youtube' && ytPlayerRef.current) {
         try {
           const player = ytPlayerRef.current;
-          if (typeof serverTime === 'number' && Math.abs(player.getCurrentTime() - serverTime) > 1.2) {
+          if (typeof serverTime === 'number' && serverTime > 0 && Math.abs(player.getCurrentTime() - serverTime) > 2.5) {
             player.seekTo(serverTime, true);
           }
           player.playVideo();
@@ -542,7 +510,7 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
       // Handle HTML5 Video
       const video = videoRef.current;
       if (video && media.type !== 'youtube') {
-        if (typeof serverTime === 'number' && Math.abs(video.currentTime - serverTime) > 1.2) {
+        if (typeof serverTime === 'number' && serverTime > 0 && Math.abs(video.currentTime - serverTime) > 2.0) {
           video.currentTime = serverTime;
         }
         video.play().then(() => {
@@ -550,7 +518,7 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
         }).catch(() => {});
       }
 
-      setTimeout(() => { isInternalUpdateRef.current = false; }, 400);
+      setTimeout(() => { isInternalUpdateRef.current = false; }, 1200);
     };
 
     const handlePause = ({ currentTime: serverTime }) => {
@@ -561,7 +529,7 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
         try {
           const player = ytPlayerRef.current;
           player.pauseVideo();
-          if (typeof serverTime === 'number' && Math.abs(player.getCurrentTime() - serverTime) > 0.6) {
+          if (typeof serverTime === 'number' && serverTime > 0 && Math.abs(player.getCurrentTime() - serverTime) > 1.5) {
             player.seekTo(serverTime, true);
           }
           setIsPlaying(false);
@@ -573,12 +541,12 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
       if (video && media.type !== 'youtube') {
         video.pause();
         setIsPlaying(false);
-        if (typeof serverTime === 'number' && Math.abs(video.currentTime - serverTime) > 0.5) {
+        if (typeof serverTime === 'number' && serverTime > 0 && Math.abs(video.currentTime - serverTime) > 1.5) {
           video.currentTime = serverTime;
         }
       }
 
-      setTimeout(() => { isInternalUpdateRef.current = false; }, 400);
+      setTimeout(() => { isInternalUpdateRef.current = false; }, 1200);
     };
 
     const handleSeek = ({ currentTime: serverTime, isPlaying: autoPlay }) => {
@@ -588,7 +556,7 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
       if (media.type === 'youtube' && ytPlayerRef.current) {
         try {
           const player = ytPlayerRef.current;
-          if (typeof serverTime === 'number') {
+          if (typeof serverTime === 'number' && !isNaN(serverTime)) {
             player.seekTo(serverTime, true);
             setCurrentTime(serverTime);
           }
@@ -605,19 +573,21 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
       // Handle HTML5 Video
       const video = videoRef.current;
       if (video && media.type !== 'youtube') {
-        if (typeof serverTime === 'number') {
+        if (typeof serverTime === 'number' && !isNaN(serverTime)) {
           video.currentTime = serverTime;
+          setCurrentTime(serverTime);
         }
         if (autoPlay) {
-          video.play().catch(() => {});
-          setIsPlaying(true);
+          video.play().then(() => {
+            setIsPlaying(true);
+          }).catch(() => {});
         } else {
           video.pause();
           setIsPlaying(false);
         }
       }
 
-      setTimeout(() => { isInternalUpdateRef.current = false; }, 400);
+      setTimeout(() => { isInternalUpdateRef.current = false; }, 1200);
     };
 
     const handleRate = ({ playbackRate: newRate }) => {
@@ -632,52 +602,43 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
     };
 
     const handleBufferPause = () => {
-      if (isDisplayingWebRtcStream) return;
-      // Suppress native play/pause handlers - otherwise this programmatic pause would
-      // re-broadcast media_pause to the room, flip isPlaying to false server-side,
-      // and permanently skip the buffer_sync_ready resume (room frozen forever).
-      isInternalUpdateRef.current = true;
-
       if (media.type === 'youtube' && ytPlayerRef.current) {
         try { ytPlayerRef.current.pauseVideo(); } catch (e) {}
       }
       const video = videoRef.current;
-      if (video && !video.paused) {
+      if (video) {
         video.pause();
       }
-
-      setTimeout(() => { isInternalUpdateRef.current = false; }, 400);
+      setIsPlaying(false);
     };
 
     const handleBufferReady = ({ resumeInMs, targetTime }) => {
-      if (isDisplayingWebRtcStream) return;
-      setIsBuffering(false);
+      if (typeof targetTime === 'number') {
+        if (media.type === 'youtube' && ytPlayerRef.current) {
+          try {
+            if (Math.abs(ytPlayerRef.current.getCurrentTime() - targetTime) > 1.5) {
+              ytPlayerRef.current.seekTo(targetTime, true);
+            }
+          } catch (e) {}
+        }
+        const video = videoRef.current;
+        if (video && Math.abs(video.currentTime - targetTime) > 1.5) {
+          video.currentTime = targetTime;
+        }
+      }
 
-      if (mediaIsPlayingRef.current) {
-        setTimeout(() => {
-          isInternalUpdateRef.current = true;
-
+      setTimeout(() => {
+        if (room?.media?.isPlaying) {
           if (media.type === 'youtube' && ytPlayerRef.current) {
-            try {
-              const player = ytPlayerRef.current;
-              if (typeof targetTime === 'number' && Math.abs(player.getCurrentTime() - targetTime) > 0.6) {
-                player.seekTo(targetTime, true);
-              }
-              player.playVideo();
-            } catch (e) {}
+            try { ytPlayerRef.current.playVideo(); } catch (e) {}
           }
           const video = videoRef.current;
-          if (video && media.type !== 'youtube') {
-            // Only seek when actually out of sync - unconditional seeks caused stutter
-            if (typeof targetTime === 'number' && Math.abs(video.currentTime - targetTime) > 0.6) {
-              video.currentTime = targetTime;
-            }
+          if (video) {
             video.play().catch(() => {});
           }
-
-          setTimeout(() => { isInternalUpdateRef.current = false; }, 600);
-        }, resumeInMs || 300);
-      }
+          setIsPlaying(true);
+        }
+      }, resumeInMs || 0);
     };
 
     socket.on('media_play', handlePlay);
