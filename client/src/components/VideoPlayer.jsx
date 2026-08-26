@@ -240,7 +240,7 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
 
   // 2. Bind YouTube Player API to the rendered <iframe>
   useEffect(() => {
-    if (media.type !== 'youtube' || !ytVideoId || !isYtApiLoaded || isDisplayingWebRtcStream) {
+    if (media.type !== 'youtube' || !ytVideoId || !isYtApiLoaded) {
       ytPlayerRef.current = null;
       return;
     }
@@ -1174,8 +1174,11 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
         <div className="absolute inset-0 z-10 bg-black flex items-center justify-center">
           <div
             ref={(node) => {
-              if (node && getRelayElement && node.childElementCount === 0) {
-                node.appendChild(getRelayElement());
+              if (!node || !getRelayElement) return;
+              const el = getRelayElement();
+              if (el && node.firstChild !== el) {
+                node.innerHTML = '';
+                node.appendChild(el);
               }
             }}
             className="w-full h-full"
