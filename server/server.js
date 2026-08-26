@@ -666,7 +666,7 @@ io.on('connection', (socket) => {
       url: url || '',
       title: title || '',
       currentTime: 0,
-      isPlaying: false,
+      isPlaying: true,
       playbackRate: 1.0,
       lastUpdated: Date.now()
     };

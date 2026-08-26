@@ -1030,22 +1030,26 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
     if (isDisplayingWebRtcStream) return;
     if (!isHost && room?.hostOnlyControl) return;
 
-    if (media.type === 'youtube' && ytPlayerRef.current) {
-      try {
-        const player = ytPlayerRef.current;
-        isInternalUpdateRef.current = true;
-        setTimeout(() => { isInternalUpdateRef.current = false; }, 800);
+    if (media.type === 'youtube') {
+      const player = ytPlayerRef.current;
+      isInternalUpdateRef.current = true;
+      setTimeout(() => { isInternalUpdateRef.current = false; }, 800);
 
-        if (isPlaying) {
-          player.pauseVideo();
-          const t = typeof player.getCurrentTime === 'function' ? player.getCurrentTime() : currentTime;
-          pauseMedia(t);
-        } else {
-          player.playVideo();
-          const t = typeof player.getCurrentTime === 'function' ? player.getCurrentTime() : currentTime;
-          playMedia(t);
+      if (isPlaying) {
+        if (player && typeof player.pauseVideo === 'function') {
+          try { player.pauseVideo(); } catch (e) {}
         }
-      } catch (e) {}
+        const t = (player && typeof player.getCurrentTime === 'function') ? player.getCurrentTime() : currentTime;
+        pauseMedia(t);
+        setIsPlaying(false);
+      } else {
+        if (player && typeof player.playVideo === 'function') {
+          try { player.playVideo(); } catch (e) {}
+        }
+        const t = (player && typeof player.getCurrentTime === 'function') ? player.getCurrentTime() : currentTime;
+        playMedia(t);
+        setIsPlaying(true);
+      }
       return;
     }
 
@@ -1547,8 +1551,26 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
         </div>
       )}
 
-      {/* High-Visibility Custom Playback Controls Overlay (Shown for local movies and direct streams; YouTube has its own native controls) */}
-      {media.type !== 'none' && media.type !== 'youtube' && !isDisplayingWebRtcStream && !isMissingGuestLocalFile && (
+      {/* Big Center Play / Resume Button Overlay when Paused */}
+      {!isPlaying && media.type !== 'none' && !isDisplayingWebRtcStream && !isMissingGuestLocalFile && (
+        <div 
+          onClick={(e) => {
+            e.stopPropagation();
+            togglePlayPause();
+          }}
+          className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 hover:bg-black/30 transition-all cursor-pointer group pointer-events-auto select-none"
+        >
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center shadow-2xl shadow-indigo-500/50 group-hover:scale-110 group-active:scale-95 transition-all border border-white/30 backdrop-blur-md mb-3">
+            <Play className="w-9 h-9 sm:w-10 sm:h-10 fill-white ml-1.5" />
+          </div>
+          <span className="px-4 py-1.5 rounded-full bg-black/70 text-white text-xs font-bold border border-white/20 shadow-lg backdrop-blur-md">
+            Click to Start Video ▶
+          </span>
+        </div>
+      )}
+
+      {/* High-Visibility Custom Playback Controls Overlay (Available for YouTube, local movies, and streams) */}
+      {media.type !== 'none' && !isDisplayingWebRtcStream && !isMissingGuestLocalFile && (
         <div 
           className={`absolute bottom-0 left-0 right-0 p-3 sm:p-5 bg-gradient-to-t from-black/90 via-black/50 to-transparent transition-opacity duration-200 z-20 ${
             showControls || showSpeedMenu ? 'opacity-100' : 'opacity-0 pointer-events-none'
