@@ -124,9 +124,7 @@ export const DesktopLobby = ({ onOpenSettings }) => {
       <header className="border-b border-white/[0.08] glass-panel px-8 lg:px-16 py-4 flex items-center justify-between z-20">
         {/* Brand Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 text-white font-extrabold flex items-center justify-center text-xs shadow-glass-glow border border-white/20">
-            <Film className="w-5 h-5" />
-          </div>
+          <img src="./logo.svg" alt="Watch Together" className="w-9 h-9 rounded-xl shadow-glass-glow object-contain" />
           <div className="flex items-center tracking-tight font-black text-xl text-white">
             <span>Watch<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Together</span></span>
             <span className="ml-2 text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/30">

@@ -56,6 +56,18 @@ namespace WatchTogetherLauncher
                 }
 
                 // 2. Launch Dedicated Standalone Native App if installed/unpacked
+                string portableExe = Path.Combine(baseDir, "WatchTogether-Desktop.exe");
+                if (File.Exists(portableExe))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = portableExe,
+                        WorkingDirectory = baseDir,
+                        UseShellExecute = true
+                    });
+                    return;
+                }
+
                 string electronExe = Path.Combine(baseDir, "client", "dist-electron", "win-unpacked", "Watch Together.exe");
                 if (File.Exists(electronExe))
                 {

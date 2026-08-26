@@ -4,18 +4,21 @@ const path = require('path');
 let mainWindow;
 
 function createWindow() {
+  const iconPath = path.join(__dirname, 'icon.png');
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 800,
     minHeight: 600,
-    title: 'Watch Together',
-    backgroundColor: '#0B0F19',
+    title: 'Watch Together - Private Cinema',
+    icon: fs.existsSync(iconPath) ? iconPath : undefined,
+    backgroundColor: '#07080d',
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: true
+      webSecurity: false, // Allows seamless media and webrtc stream loading across protocols
+      allowRunningInsecureContent: true
     }
   });
 
@@ -24,7 +27,11 @@ function createWindow() {
   if (isDev) {
     mainWindow.loadURL('http://localhost:3000');
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    const indexPath = path.join(__dirname, '../dist/index.html');
+    mainWindow.loadFile(indexPath).catch((err) => {
+      console.warn('Failed to load local HTML, falling back to live cloud URL:', err);
+      mainWindow.loadURL('https://watch-together-8wj2.onrender.com');
+    });
   }
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {

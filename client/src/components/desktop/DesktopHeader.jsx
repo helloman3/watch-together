@@ -69,9 +69,7 @@ export const DesktopHeader = ({ onOpenSettings, onOpenTunnel }) => {
       <div className="flex items-center gap-5">
         {/* Brand Icon & Name */}
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 text-white font-extrabold flex items-center justify-center text-xs shadow-glass-glow border border-white/20">
-            <Film className="w-4 h-4" />
-          </div>
+          <img src="./logo.svg" alt="Watch Together" className="w-8 h-8 rounded-xl shadow-glass-glow object-contain" />
           <div className="flex flex-col">
             <span className="font-extrabold text-white text-sm tracking-tight flex items-center gap-1.5">
               Watch<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Together</span>

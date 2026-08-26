@@ -158,9 +158,7 @@ export const MobileLobby = () => {
       {/* 2. Top Navbar */}
       <header className="px-5 py-3.5 flex items-center justify-between border-b border-white/[0.08] glass-panel">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-600 to-purple-600 text-white font-extrabold flex items-center justify-center text-xs shadow-glass-glow">
-            <Film className="w-3.5 h-3.5" />
-          </div>
+          <img src="./logo.svg" alt="Watch Together" className="w-7 h-7 rounded-lg shadow-glass-glow object-contain" />
           <span className="font-extrabold text-sm text-white tracking-tight">
             Watch<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Together</span>
           </span>
