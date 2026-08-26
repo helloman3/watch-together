@@ -238,27 +238,14 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
     return () => clearInterval(pollYt);
   }, []);
 
-  // 2. Instantiate & Manage YouTube Player on a dedicated DOM mount node
+  // 2. Bind YouTube Player API to the rendered <iframe>
   useEffect(() => {
     if (media.type !== 'youtube' || !ytVideoId || !isYtApiLoaded || isDisplayingWebRtcStream) {
-      if (ytPlayerRef.current) {
-        try { ytPlayerRef.current.destroy(); } catch (e) {}
-        ytPlayerRef.current = null;
-      }
+      ytPlayerRef.current = null;
       return;
     }
 
-    const container = ytContainerRef.current;
-    if (!container) return;
-
     let isMounted = true;
-
-    // Reset container and create a dedicated mount node for YouTube API
-    container.innerHTML = '';
-    const mountDiv = document.createElement('div');
-    mountDiv.style.width = '100%';
-    mountDiv.style.height = '100%';
-    container.appendChild(mountDiv);
 
     try {
       if (ytPlayerRef.current) {
@@ -266,20 +253,7 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
         ytPlayerRef.current = null;
       }
 
-      ytPlayerRef.current = new window.YT.Player(mountDiv, {
-        videoId: ytVideoId,
-        width: '100%',
-        height: '100%',
-        playerVars: {
-          autoplay: 1,
-          controls: 1,
-          modestbranding: 1,
-          rel: 0,
-          enablejsapi: 1,
-          playsinline: 1,
-          fs: 1,
-          origin: typeof window !== 'undefined' ? window.location.origin : undefined
-        },
+      ytPlayerRef.current = new window.YT.Player('yt-player-iframe', {
         events: {
           onReady: (event) => {
             if (!isMounted) return;
@@ -353,15 +327,12 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
         }
       });
     } catch (err) {
-      console.warn('Failed to init YT player:', err);
+      console.warn('Failed to bind YT player to iframe:', err);
     }
 
     return () => {
       isMounted = false;
-      if (ytPlayerRef.current) {
-        try { ytPlayerRef.current.destroy(); } catch (e) {}
-        ytPlayerRef.current = null;
-      }
+      ytPlayerRef.current = null;
     };
   }, [media.type, ytVideoId, isYtApiLoaded, isDisplayingWebRtcStream]);
 
@@ -1328,8 +1299,16 @@ export const VideoPlayer = ({ onSelectLocalFile, guestLocalBlobUrl }) => {
 
       {/* Synchronized YouTube IFrame Player Slot */}
       {media.type === 'youtube' && !isDisplayingWebRtcStream && (
-        <div className="w-full h-full flex items-center justify-center bg-black relative">
-          <div ref={ytContainerRef} className="w-full h-full pointer-events-auto" />
+        <div className="w-full h-full flex items-center justify-center bg-black relative overflow-hidden">
+          <iframe
+            id="yt-player-iframe"
+            key={ytVideoId}
+            src={`https://www.youtube-nocookie.com/embed/${ytVideoId}?enablejsapi=1&autoplay=1&controls=1&rel=0&playsinline=1`}
+            title="YouTube Video Player"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            className="w-full h-full border-0 absolute inset-0 pointer-events-auto"
+          />
         </div>
       )}
 
