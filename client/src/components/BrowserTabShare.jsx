@@ -404,7 +404,7 @@ export const BrowserTabShare = ({ onSelectLocalFile }) => {
                 </div>
                 <div className="text-[11px] text-slate-400 leading-relaxed mt-0.5">
                   {!isScreenShareSupported
-                    ? 'Broadcasting screen is not supported on mobile browsers. Host by pasting a link or selecting a local video file.'
+                    ? 'Screen Broadcasting is available on PC / Mac. On mobile, host easily using Local Video or YouTube!'
                     : isScreenSharing
                     ? 'Your tab and audio are streaming in high framerate.'
                     : 'Select "Chrome Tab" and check "Also share tab audio" for synced sound.'}

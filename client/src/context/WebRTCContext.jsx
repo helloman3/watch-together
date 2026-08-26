@@ -1190,7 +1190,12 @@ export const WebRTCProvider = ({ children }) => {
   // Start Screen Share
   const startScreenShare = useCallback(async () => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-      alert('Screen sharing is not supported on this device/browser. Please use Chrome, Edge, or Firefox on Desktop, or connect over HTTPS.');
+      const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+      if (isMobile) {
+        alert('Live Screen Broadcasting is designed for Desktop (PC / Mac / Laptop).\n\n📱 On Mobile: You can host by selecting "Local Video" from your storage or pasting any YouTube/Web stream link!');
+      } else {
+        alert('Screen sharing is not supported on this browser. Please use Chrome, Edge, or Firefox on Desktop over HTTPS.');
+      }
       return null;
     }
 
